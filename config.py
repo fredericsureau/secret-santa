@@ -14,7 +14,7 @@ EMAILS = {
 COUPLES = (('Pierre','Marie'),('Jean',),('Claire',))
 SENDER = '"Le Père-Noël" <yourmail@test.com>'
 
-CONTENT = """Cher(e) %s,
+CONTENT = """Cher(e) {mail_receiver},
 
 Cette année j'ai eu la chance d'échapper à la grippe de l'année dernière,
 cependant j'ai pris un peu de retard dans mon travail. Comme je sais que dans
@@ -23,7 +23,7 @@ les magasins, j'ai demandé à mes lutins de confectionner un petit logiciel pou
 répartir les rôles entre vous sans que personne ne sache qui offre à qui.
 Eh oui, c'est qu'ils se mettent à l'informatique mes lutins !
 
-Je serais donc ravi si tu pouvais m'aider pour offrir un cadeau à %s.
+Je serais donc ravi si tu pouvais m'aider pour offrir un cadeau à {gift_receiver}.
 
 Ah oui, aussi, envoie-moi vite ta liste !
 Allez ! Bybye !

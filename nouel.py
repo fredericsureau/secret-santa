@@ -112,7 +112,7 @@ def main(config):
     for i in range(len(persons)):
         recipients = emails[persons[i]]
         message.replace_header('to', recipients)
-        message.set_payload(content % (persons[i], random_case[i]))
+        message.set_payload(content.format(mail_receiver=persons[i], gift_receiver=random_case[i]))
 
         server.sendmail(sender, [recipients], message.as_string())
         print persons[i], ' => ', random_case[i]
