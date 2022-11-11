@@ -1,128 +1,81 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys
 import random
 import smtplib
-from email.message import Message
+import yaml
+import copy
+from email.message import EmailMessage
 
-def get_persons(couples):
-    """Return a list of persons from a list of couples"""
-    persons = []
-    for couple in couples:
-            persons += list(couple)
+def getcases(possibilities, remaining=None):
+    if not possibilities:
+        return [[]]
+
+    if remaining is None:
+        remaining = list(possibilities)
+
+    possibilities = copy.deepcopy(possibilities)
+    person, candidates = possibilities.popitem()
+    candidates.intersection_update(remaining)
     
-    return persons
+    allcases = []
+    for candidate in candidates:
+        remaining_copy = remaining.copy()
+        remaining_copy.remove(candidate)
+        subcases = getcases(possibilities, remaining_copy)
+        cases = [[(person, candidate)] + subcase for subcase in subcases]
+        allcases += cases
 
-def find_persons_possibilities(couples):
-    """ Find possibilities lists
-    Creating the possibilities for each person
-    possibilities[i] is all possibles persons for the i-eme person
-    """
-    possibilities = []
-    for i in range(len(couples)):
-        other_couples = couples[0:i] + couples[i+1:]
-        other_persons = get_persons(other_couples)
-        for j in range(len(couples[i])):
-            possibilities.append(other_persons)
+    return allcases
+
+def main(config_file="config.yml"):
+    with open(config_file) as f:
+        config = yaml.safe_load(f)
     
-    return possibilities
-
-def find_all_possible_cases(possibilities, index, persons_available):
-    """Finding all possible cases"""
-
-    results = []
-
-    for i in possibilities[index]:
-        try:
-            person_index = persons_available.index(i)
+    participants = config["participants"]
+    exclusions = config.get("exclusions", {}).get("simple", {})
+    mutual_exclusions = config.get("exclusions", {}).get("mutual", [])
     
-            if index == len(possibilities) - 1:
-                #print 'In function : ', i
-                tail = []
-                tail.append(i)
-                results.append(tail)
-                    
-            else:
-                remaining_persons = persons_available[0:person_index] \
-                                    + persons_available[person_index+1:]
+    # Add mutual exclusions to simple exclusions list
+    for group in mutual_exclusions:
+        for p in group:
+            exclusions.setdefault(p, []).extend(group)
 
-                subpossibles = find_all_possible_cases(possibilities, 
-                        index+1, remaining_persons)
-                    
-                for j in subpossibles:
-                    j.insert(0, i)
-                    results.append(j)
-                
-        except ValueError:
-            pass
+    possibilities = {}
+    for p in list(participants):
+        possibilities[p] = set(participants)
+        possibilities[p].difference_update({p}, exclusions.get(p, {}))
+
+    cases = getcases(possibilities)
     
-    return results
+    print(len(cases), "cas possibles")
+    
+    case = random.choice(cases)
+    
+    sender = config.get("email").get("sender")
+    
+    message = EmailMessage()
+    message['From'] = sender
+    message['To'] = sender
+    message['Subject'] = config.get("email").get("subject")
 
-def lets_do_santa_claus_job(couples):
-    """Let's do the santa claus' job !"""
-
-    # Creating the possibilities for each person
-    persons_possibilities = find_persons_possibilities(couples)
-
-    # Identify all possible cases
-    persons = get_persons(couples)
-
-    possible_cases = find_all_possible_cases(persons_possibilities, 0, persons)
-
-    random_case = random.choice(possible_cases)
-
-    return random_case
-
-def read_config(filename):
-    """Load a Python file into a dictionary.
-    """
-    context = {}
-    if filename:
-        tempdict = {}
-        execfile(filename, tempdict)
-        for key in tempdict:
-            if key.isupper():
-                context[key] = tempdict[key]
-    return context
-
-def main(config):
-    """main routine"""
-    # Define the emails and couples
-    # Only one sub-tuple level is supported
-    emails = config['EMAILS']
-    couples = config['COUPLES']
-    sender = config['SENDER']
-    content = config['CONTENT']
-
-    # Find a random possible case
-    persons = get_persons(couples)
-    random_case = lets_do_santa_claus_job(couples)
-
-    # Send mails
-    message = Message()
-    message.add_header('from', sender)
-    message.add_header('subject','[Confidentiel] Message du Père-Noël')
-    message.add_header('to', sender)
-
-    server = smtplib.SMTP(config['MAIL_HOST'], config['MAIL_PORT'])
+    server = smtplib.SMTP(config.get("smtp").get("host"), config.get("smtp").get("port"))
     server.starttls()
-    server.login(config['MAIL_USERNAME'], config['MAIL_PASSWORD'])
+    server.login(config.get("smtp").get("username"), config.get("smtp").get("password"))
 
-    for i in range(len(persons)):
-        recipients = emails[persons[i]]
-        message.replace_header('to', recipients)
-        message.set_payload(content.format(mail_receiver=persons[i], gift_receiver=random_case[i]))
+    content = config.get("email").get("content")
 
-        server.sendmail(sender, [recipients], message.as_string())
-        print persons[i], ' => ', random_case[i]
+    for mail_receiver, gift_receiver in case:
+        recipient = participants[mail_receiver]
+        message.replace_header('To', recipient)
+        message.set_content(content.format(mail_receiver=mail_receiver, gift_receiver=gift_receiver), charset="UTF-8")
+
+        server.sendmail(sender, [recipient], message.as_string())
+        print(mail_receiver, "→", gift_receiver)
 
     server.quit()
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        fn = sys.argv[1]
-    else:
-        fn = "config.py"
-    config = read_config(fn)
-    main(config)
+    main(*sys.argv[1:])
+

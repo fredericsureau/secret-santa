@@ -1,0 +1,36 @@
+smtp:
+    host: smtp.gmail.com
+    port: 587
+    username: your.name@gmail.com
+    password: your pass
+
+participants:
+    "Pierre": pierre@test.com
+    "Marie": marie@test.com
+    "Jean": jean@test.com
+    "Claire": claire@test.com
+
+exclusions:
+    simple:
+        "Pierre": ["Marie"]
+        "Marie": ["Pierre"]
+    mutual:
+        - ["Pierre", "Marie"]
+
+email:
+    sender: '"Le Père-Noël" <yourmail@test.com>'
+    subject: "[Confidentiel] Message du Père-Noël"
+    content: >
+        Cher(e) {mail_receiver},
+
+
+        Cette année j'ai pris un peu de retard dans mon travail. Comme je sais que dans
+        votre famille vous êtes toujours prêts à aider et que vous aimez beaucoup faire
+        des cadeaux, j'ai demandé à mes lutins de confectionner un petit logiciel pour
+        répartir les rôles entre vous sans que personne ne sache qui offre à qui.
+
+
+        Je serais donc ravi si tu pouvais m'aider pour offrir un cadeau à {gift_receiver}.
+
+
+        Le Père-Noël.
